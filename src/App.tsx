@@ -1,43 +1,64 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, MouseEventHandler } from 'react';
 import { AudioProvider, useSynthesizer } from './hooks/useSynthesizer';
+import './App.scss';
 
-function SynthPad({ frequency }: { frequency: number }) {
+const notes = {
+  C4: 261.63,
+  E4: 329.63,
+  G4: 392.00,
+};
+
+function SynthPad({ frequency, enabled }: { frequency: number, enabled: boolean }) {
   const { play } = useSynthesizer();
 
-  const chord = useCallback(function () {
-    play(261.63); // C4
-    play(329.63); // E4
-    play(392.00); // G4
-  }, [play]);
+  const handleTap = useCallback(function () {
+    if (!enabled) return;
+    play(frequency, undefined, undefined, undefined, 5, 6);
+  }, [frequency, enabled]);
 
   return (
-    <button
-      className="btn btn-primary"
-      onClick={() => play(frequency, undefined, undefined, undefined, 5, 6)}
-      >
-        tap
-    </button>
+    <div className={"pad pad-wrapper " + (enabled ? 'enabled' : 'disabled')}>
+      <button
+        className="btn btn-primary"
+        onClick={handleTap}
+        />
+    </div>
+  )
+}
+
+function PowerButton({ enabled, onClick }: { enabled: boolean, onClick: MouseEventHandler }) {
+  return (
+    <div className={"control power-button " + (enabled ? 'on' : 'off')}>
+      <div className="wrapper">
+        <span className="btn btn1">ON</span>
+        <span className="btn main"></span>
+        <span className="btn btn2">OFF</span>
+        <label className="handler" onClick={onClick} />
+      </div>
+    </div>
   )
 }
 
 function Synthesizer() {
-  const { init } = useSynthesizer();
+  const { setup, teardown } = useSynthesizer();
   const [enabled, setEnabled] = useState(false);
-  const soundBoard = enabled ? <div>
-    <SynthPad frequency={261.63} />
-  </div> : null;
 
-  const initialize = useCallback(function () {
-    if (!enabled) {
-      init();
-      setEnabled(true);
+  const handlePower = useCallback(function (enabled: boolean) {
+    // toggle power, and modify synth accordingly
+    if (enabled) {
+      teardown();
+    } else {
+      setup();
     }
-  }, [enabled]);
+    setEnabled(!enabled);
+  }, []);
 
   return (
     <div>
-      <button onClick={() => initialize()}>toggle</button>
-      {soundBoard}
+      <PowerButton enabled={enabled} onClick={() => handlePower(enabled)} />
+      <div className="synth synth-board">
+        <SynthPad frequency={notes.C4} enabled={enabled} />
+      </div>
     </div>
   )
 }
@@ -45,7 +66,7 @@ function Synthesizer() {
 function App() {
   return (
     <AudioProvider>
-      <div className="App">
+      <div className="app">
         <Synthesizer />
       </div>
     </AudioProvider>
